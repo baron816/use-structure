@@ -1,0 +1,24 @@
+{
+  "name": "use-structure",
+  "version": "0.1.0",
+  "description": "Hooks for working with basic JavaScript data structures",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "use-structure"
+  },
+  "keywords": [
+    "React",
+    "hooks",
+    "proxy",
+    "array",
+    "object",
+    "set",
+    "map"
+  ],
+  "author": "Baron Willeford",
+  "license": "MIT"
+}
