@@ -2,9 +2,16 @@
   "name": "use-structure",
   "version": "0.1.0",
   "description": "Hooks for working with basic JavaScript data structures",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "npm jest --watch"
+    "test": "jest --watch",
+    "clean": "rm -rf dist && mkdir dist",
+    "build": "npm run clean && npm run build:types && npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir dist --extensions \".ts,.txt\" --source-maps inline",
+    "prepare": "npm run build",
+    "ts": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -20,5 +27,20 @@
     "map"
   ],
   "author": "Baron Willeford",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "react": "^16.13.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.5",
+    "@babel/core": "^7.11.1",
+    "@babel/preset-env": "^7.11.0",
+    "@babel/preset-typescript": "^7.10.4",
+    "@types/jest": "^26.0.9",
+    "@types/react": "^16.9.46",
+    "babel-jest": "^26.3.0",
+    "jes": "^0.6.1",
+    "ts-jest": "^26.2.0",
+    "typescript": "^3.9.7"
+  }
 }
