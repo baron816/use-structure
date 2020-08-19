@@ -165,7 +165,7 @@ function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
       switch (prop) {
         case "push":
           return (...v: any[]) => {
-            setObj([...target, v]);
+            setObj([...target, ...v]);
             return v[v.length - 1];
           };
         case "pop":
