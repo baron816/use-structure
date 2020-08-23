@@ -1,6 +1,6 @@
 {
   "name": "use-structure",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Hooks for working with basic JavaScript data structures",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

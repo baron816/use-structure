@@ -83,35 +83,53 @@ function objectProxy(
   obj: Record<any, any>,
   setObj: (newObj: Collection) => void
 ) {
+  let memo: Record<any, any> | null = null;
   return new Proxy(obj, {
     set: function (target, prop, receiver) {
-      const newObj = { ...target, [prop]: receiver };
-      setObj(newObj);
+      if (typeof prop === "symbol") {
+        return false;
+      }
+      if (memo == null) {
+        memo = { ...target };
+      }
+
+      memo[prop] = receiver;
+      setObj(memo);
       return true;
     }
   });
 }
 
 function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
+  let memo: Map<any, any> | null = null;
   return new Proxy(map, {
     get: function (target, prop, receiver) {
       if (prop === "set") {
         return (key: any, value: any) => {
-          const newMap = new Map(target);
-          newMap.set(key, value);
+          if (memo == null) {
+            memo = new Map(target);
+          }
+          memo.set(key, value);
 
-          setObj(newMap);
+          setObj(map);
+          return memo;
         };
       } else if (prop === "delete") {
         return (key: any) => {
-          const newMap = new Map(target);
-          newMap.delete(key);
-
-          setObj(newMap);
+          if (memo == null) {
+            memo = new Map(target);
+          }
+          if (memo.delete(key)) {
+            setObj(memo);
+            return true;
+          } else {
+            return false;
+          }
         };
       } else if (prop === "clear") {
         return () => {
-          setObj(new Map());
+          memo = new Map();
+          setObj(memo);
         };
       } else if (prop === "get") {
         return target.get.bind(target);
@@ -125,6 +143,7 @@ function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
 }
 
 function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
+  let memo: Set<any> | null = null;
   return new Proxy(set, {
     get: function (target, prop, receiver) {
       if (prop === "add") {
@@ -132,21 +151,28 @@ function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
           if (target.has(val)) {
             return;
           }
-          const newSet = new Set(target);
-          newSet.add(val);
-          setObj(newSet);
+          if (memo == null) {
+            memo = new Set(target);
+          }
+          memo.add(val);
+          setObj(memo);
         };
       } else if (prop === "delete") {
-        return (val: any) => {
-          if (target.has(val)) {
-            const newSet = new Set(target);
-            newSet.delete(val);
-            setObj(newSet);
+        return (key: any) => {
+          if (memo == null) {
+            memo = new Set(target);
+          }
+          if (memo.delete(key)) {
+            setObj(memo);
+            return true;
+          } else {
+            return false;
           }
         };
       } else if (prop === "clear") {
         return () => {
-          setObj(new Set());
+          memo = new Set();
+          setObj(memo);
         };
       } else if (prop === "has") {
         return target.has.bind(target);
@@ -160,79 +186,105 @@ function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
 }
 
 function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
+  let memo: any[] = [];
   return new Proxy(arr, {
     get: function (target, prop, receiver) {
       switch (prop) {
         case "push":
           return (...v: any[]) => {
-            setObj([...target, ...v]);
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+            memo.push(...v);
+            setObj(memo);
             return v[v.length - 1];
           };
         case "pop":
           return () => {
-            const lastArg = target[target.length - 1];
-            const newArr = target.slice(0, target.length - 1);
-            setObj(newArr);
-            return lastArg;
+            if (memo.length === 0) {
+              memo = target;
+            }
+            const lastVal = memo.pop();
+            setObj(memo);
+            return lastVal;
           };
         case "unshift":
           return (...v: any[]) => {
-            const newArr = [...v.reverse(), ...target];
-            setObj(newArr);
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+            memo.unshift(...v);
+            setObj(memo);
             return v[0];
           };
         case "shift":
           return () => {
-            const [firstArg, ...newArr] = target;
-            setObj(newArr);
-            return firstArg;
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+            const firstVal = memo.shift();
+            setObj(memo);
+            return firstVal;
           };
         case "sort":
           return (compareFunction?: (a: number, b: number) => number) => {
-            const newArr = [...target];
-            newArr.sort(compareFunction);
-            setObj(newArr);
-            return newArr;
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+
+            memo.sort(compareFunction);
+            setObj(memo);
+            return memo;
           };
         case "splice":
           return (start: number, deleteCount: number, ...items: any[]) => {
-            const newArr = [...target];
-            newArr.splice(start, deleteCount, ...items);
-            setObj(newArr);
-            return newArr;
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+            memo.splice(start, deleteCount, ...items);
+            setObj(memo);
+            return memo;
           };
         case "reverse":
           return () => {
-            const newArr = [...target].reverse();
-            setObj(newArr);
-            return newArr;
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+            memo.reverse();
+            setObj(memo);
+            return memo;
           };
         case "copyWithin":
           return (idx: number, start: number, end?: number) => {
-            const newArr = [...target];
-            newArr.copyWithin(idx, start, end);
-            setObj(newArr);
-            return newArr;
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+
+            memo.copyWithin(idx, start, end);
+            setObj(memo);
+            return memo;
           };
         case "fill":
           return (value: any, start?: number, end?: number) => {
-            const newArr = [...target];
-            newArr.fill(value, start, end);
-            setObj(newArr);
-            return newArr;
+            if (memo.length === 0) {
+              memo.push(...target);
+            }
+            memo.fill(value, start, end);
+            setObj(memo);
+            return memo;
           };
         default:
           return Reflect.get(target, prop, receiver);
       }
     },
     set: function (target, prop, receiver) {
-      if (typeof prop !== "symbol" && !Number.isNaN(Number(prop))) {
-        const newArr = [
-          ...target.slice(0, Number(prop)),
-          receiver,
-          ...target.slice(Number(prop) + 1)
-        ];
-        setObj(newArr);
+      if (typeof prop === "number" && !Number.isNaN(Number(prop))) {
+        if (memo.length === 0) {
+          memo.push(...target);
+        }
+        memo[prop] = receiver;
+
+        setObj(memo);
         return true;
       }
       return Reflect.get(target, prop, receiver);

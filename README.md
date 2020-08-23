@@ -89,36 +89,6 @@ Use any number of nested Objects, Sets, Maps, and Arrays. All of the appropriate
 ## Caveats
 1. Don't use this if you need to support pre ES6 browsers. This package depends on [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy), which can't be polyfilled.
 
-2. If you make multiple updates in a single render on the root object, you'll end up only receiving the last update.
-
-```javascript
-...
-const arr = useStructure([1, 2, 3]);
-...
-
-<div onClick={() => {
-    arr.push(4);
-    arr.push(5); // arr will equal [1, 2, 3, 5] on next render
-}}>...</div>
-...
-```
-
-You can avoid this by wrapping it in an object.
-
-```javascript
-...
-const { arr } = useStructure([{ arr: 1, 2, 3] });
-...
-
-<div onClick={() => {
-    arr.push(4);
-    arr.push(5); // arr will equal [1, 2, 3, 4, 5] on next render
-}}>...</div>
-...
-```
-
-This should be easy to avoid in most cases anyway (in this case `arr.push(4, 5)` would also work), but something to keep in mind if you're getting odd bugs.
-
-3. Don't use cyclical graphs. Though it likely could be supported, it's an edge case I don't want to try to address.
+2. Don't use cyclical graphs. Though it likely could be supported, it's an edge case I don't want to try to address.
 
 4. Object, Array, Map, Set are the only types of objects that are supported. If you pass an object that has its own methods on it, those methods won't update the component correctly.
