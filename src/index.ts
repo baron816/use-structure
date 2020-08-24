@@ -69,14 +69,25 @@ function deepCopy(
 
     return arrayProxy(newArr, setObj);
   } else {
-    const result: Record<any, any> = {};
+    const result: Record<any, any> = Object.create(obj);
 
-    for (const [key, val] of Object.entries(obj)) {
-      result[key] = deepCopy(val, update, result, key);
+    for (const key of getAllPropertyNames(obj)) {
+      result[key] = deepCopy(obj[key], update, result, key);
     }
-
     return objectProxy(result, setObj);
   }
+}
+
+function getAllPropertyNames(obj: Record<any, any>) {
+  const methods = new Set<string>();
+  while (obj !== Object.prototype) {
+    let keys = Reflect.ownKeys(obj);
+    (keys.filter((v) => typeof v === "string") as string[]).forEach((k) =>
+      methods.add(k)
+    );
+    obj = Reflect.getPrototypeOf(obj);
+  }
+  return methods;
 }
 
 function objectProxy(
@@ -85,6 +96,29 @@ function objectProxy(
 ) {
   let memo: Record<any, any> | null = null;
   return new Proxy(obj, {
+    get: function (target, prop, receiver) {
+      if (
+        typeof prop === "string" &&
+        getAllPropertyNames(target).has(prop) &&
+        typeof target[prop] === "function"
+      ) {
+        return (...args: any[]) => {
+          if (memo == null) {
+            memo = Object.assign(
+              Object.create(Object.getPrototypeOf(target)),
+              target
+            );
+          }
+
+          const result = memo?.[prop](...args);
+          if (memo && result === undefined) {
+            setObj(memo);
+          }
+          return result;
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
     set: function (target, prop, receiver) {
       if (typeof prop === "symbol") {
         return false;
@@ -96,7 +130,7 @@ function objectProxy(
       memo[prop] = receiver;
       setObj(memo);
       return true;
-    }
+    },
   });
 }
 
@@ -138,7 +172,7 @@ function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
       }
 
       return Reflect.get(target, prop, receiver);
-    }
+    },
   });
 }
 
@@ -181,7 +215,7 @@ function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
       }
 
       return Reflect.get(target, prop, receiver);
-    }
+    },
   });
 }
 
@@ -202,7 +236,7 @@ function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
         case "pop":
           return () => {
             if (memo.length === 0) {
-              memo = target;
+              memo.push(...target);
             }
             const lastVal = memo.pop();
             setObj(memo);
@@ -288,6 +322,6 @@ function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
         return true;
       }
       return Reflect.get(target, prop, receiver);
-    }
+    },
   });
 }

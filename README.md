@@ -86,9 +86,38 @@ const state = useStructure({
 
 Use any number of nested Objects, Sets, Maps, and Arrays. All of the appropriate methods will still work correctly.
 
+# use class instances
+```javascript
+class Counter {
+  constructor(initialVal = 0) {
+    this.count = initialVal;
+  }
+
+  increment() {
+    this.count += 1;
+  }
+
+  decrement() {
+    this.count -= 1;
+  }
+}
+
+function MyComponent() {
+    const counter = useStructure(() => new Counter());
+
+    return (
+        <h1>{counter.count}</h1>
+        <button onClick={() => counter.increment()}>increment</button>
+        <button onClick={() => counter.decrement()}>decrement</button>
+    )
+}
+```
+
+Note that if your class method returns a value, it should not be `undefined` (use `null` instead). If it returns `undefined`, it's an indication that you don't want to cause a rerender (you just want to derive some value).
+
 ## Caveats
 1. Don't use this if you need to support pre ES6 browsers. This package depends on [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy), which can't be polyfilled.
 
 2. Don't use cyclical graphs. Though it likely could be supported, it's an edge case I don't want to try to address.
 
-4. Object, Array, Map, Set are the only types of objects that are supported. If you pass an object that has its own methods on it, those methods won't update the component correctly.
+3. If you use a class instance, your mutating methods must not return anything/return `undefined`, and your "getters" must not return `undefined` (use `null` instead`). This is to prevent render loops.
