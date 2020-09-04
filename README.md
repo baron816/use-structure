@@ -4,11 +4,15 @@ Use Objects, Arrays, Maps, and Sets in the imperative way, but keep React State 
 
 You mutative calls to arrays will be intercepted so that they're immutative, and your component gets updated correctly.
 
+## Install
+
+`npm install use-structure`
+
 ## Usage
 
 ### use with objects
 ```javascript
-import { useStructure } from 'useStructure';
+import { useStructure } from 'use-structure';
 
 function MyComponent() {
     const state = useStructure({
