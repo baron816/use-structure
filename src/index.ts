@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 type Collection = Record<any, any> | any[] | Set<any>;
 
@@ -19,6 +19,28 @@ export function useStructure<T extends Collection>(
 
     return copy;
   }, [deepObj]);
+}
+
+export function createGlobalStructure<T extends Collection>(initialObj: T) {
+  const observer = new Observer(initialObj);
+
+  return function useStructure(): T {
+    const [deepObj, setDeepObj] = useState<T>(observer.value);
+
+    useEffect(() => {
+      return observer.subscribe(setDeepObj);
+    }, []);
+
+    return useMemo(() => {
+      const copy = deepCopy(deepObj, update);
+
+      function update(newObj?: any) {
+        observer.update(newObj ?? copy);
+      }
+
+      return copy;
+    }, [deepObj]);
+  };
 }
 
 function deepCopy(
@@ -324,4 +346,35 @@ function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
       return Reflect.get(target, prop, receiver);
     },
   });
+}
+
+type Subscriber<T> = (val: T) => void;
+
+class Observer<T> {
+  subscribers: Set<Subscriber<T>>;
+  value: T;
+
+  constructor(val: T) {
+    this.value = val;
+    this.subscribers = new Set<Subscriber<T>>();
+  }
+
+  unsubscribe(fn: Subscriber<T>): () => void {
+    return () => {
+      this.subscribers.delete(fn);
+    };
+  }
+
+  subscribe(fn: Subscriber<T>): () => void {
+    this.subscribers.add(fn);
+    return this.unsubscribe(fn);
+  }
+
+  update(newVal: T): void {
+    this.value = newVal;
+
+    for (const sub of this.subscribers) {
+      sub(this.value);
+    }
+  }
 }

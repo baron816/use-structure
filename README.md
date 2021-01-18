@@ -11,31 +11,39 @@ You mutative calls to arrays will be intercepted so that they're immutative, and
 ## Usage
 
 ### use with objects
+
 ```javascript
-import { useStructure } from 'use-structure';
+import { useStructure } from "use-structure";
 
 function MyComponent() {
-    const state = useStructure({
-        name: '',
-        email: '',
-    });
+  const state = useStructure({
+    name: "",
+    email: "",
+  });
 
-    return (
-        <form>
-            <input onChange={e => {
-                state.name = e.target.value;
-            }} value={state.name}/>
-            <input onChange={e => {
-                state.email = e.target.value;
-            }} value={state.email}/>
-        </form>
-    )
+  return (
+    <form>
+      <input
+        onChange={(e) => {
+          state.name = e.target.value;
+        }}
+        value={state.name}
+      />
+      <input
+        onChange={(e) => {
+          state.email = e.target.value;
+        }}
+        value={state.email}
+      />
+    </form>
+  );
 }
 ```
 
 The assignment operator `myObj.val = newVal` will update your object here.
 
 ### use with arrays
+
 ```javascript
 ...
 const arr = useStructure([]);
@@ -48,6 +56,7 @@ const arr = useStructure([]);
 All the mutuative array methods (`push`, `pop`, `shift`, `unshift`, `sort`, `splice`, `reverse`, `copyWith`, and `fill`) will work as you expect them to in this context.
 
 ### use with sets
+
 ```javascript
 ...
 const set = useStructure(new Set());
@@ -60,6 +69,7 @@ const set = useStructure(new Set());
 `add`, `delete`, and `clear` will update your set.
 
 ### use with maps
+
 ```javascript
 ...
 const map = useStructure(new Map());
@@ -73,6 +83,7 @@ const map = useStructure(new Map());
 `set`, `delete`, and `clear` will update your map.
 
 ### use nested data structures
+
 ```javascript
 const state = useStructure({
     people: [
@@ -91,6 +102,7 @@ const state = useStructure({
 Use any number of nested Objects, Sets, Maps, and Arrays. All of the appropriate methods will still work correctly.
 
 # use class instances
+
 ```javascript
 class Counter {
   constructor(initialVal = 0) {
@@ -120,8 +132,11 @@ function MyComponent() {
 Note that if your class method returns a value, it should not be `undefined` (use `null` instead). If it returns `undefined`, it's an indication that you don't want to cause a rerender (you just want to derive some value).
 
 ## Caveats
+
 1. Don't use this if you need to support pre ES6 browsers. This package depends on [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy), which can't be polyfilled.
 
 2. Don't use cyclical graphs. Though it likely could be supported, it's an edge case I don't want to try to address.
 
 3. If you use a class instance, your mutating methods must not return anything/return `undefined`, and your "getters" must not return `undefined` (use `null` instead`). This is to prevent render loops.
+
+4. Any methods on your objects shouldn't be async. Your components won't update correctly if you're trying to set state from within those promises.
