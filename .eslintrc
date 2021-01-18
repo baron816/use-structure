@@ -1,0 +1,4 @@
+{ 
+    "extends": "eslint-config-baron",
+    "parser": "@babel/eslint-parser"
+}
