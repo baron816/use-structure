@@ -2,15 +2,15 @@
 
 Use Objects, Arrays, Maps, and Sets in the imperative way, but keep React State updated correctly.
 
-You mutative calls to arrays will be intercepted so that they're immutative, and your component gets updated correctly.
+Your mutative calls to arrays will be intercepted so that they're immutative, and your component gets updated correctly.
 
 ## Install
 
 `npm install use-structure`
 
-## Usage
+## useStructure Usage
 
-### use with objects
+### Objects
 
 ```javascript
 import { useStructure } from "use-structure";
@@ -42,7 +42,7 @@ function MyComponent() {
 
 The assignment operator `myObj.val = newVal` will update your object here.
 
-### use with arrays
+### Arrays
 
 ```javascript
 ...
@@ -55,7 +55,7 @@ const arr = useStructure([]);
 
 All the mutuative array methods (`push`, `pop`, `shift`, `unshift`, `sort`, `splice`, `reverse`, `copyWith`, and `fill`) will work as you expect them to in this context.
 
-### use with sets
+### Sets
 
 ```javascript
 ...
@@ -68,7 +68,7 @@ const set = useStructure(new Set());
 
 `add`, `delete`, and `clear` will update your set.
 
-### use with maps
+### Maps
 
 ```javascript
 ...
@@ -82,7 +82,7 @@ const map = useStructure(new Map());
 
 `set`, `delete`, and `clear` will update your map.
 
-### use nested data structures
+### Nested data structures
 
 ```javascript
 const state = useStructure({
@@ -101,7 +101,7 @@ const state = useStructure({
 
 Use any number of nested Objects, Sets, Maps, and Arrays. All of the appropriate methods will still work correctly.
 
-# use class instances
+### Class instances
 
 ```javascript
 class Counter {
@@ -130,6 +130,77 @@ function MyComponent() {
 ```
 
 Note that if your class method returns a value, it should not be `undefined` (use `null` instead). If it returns `undefined`, it's an indication that you don't want to cause a rerender (you just want to derive some value).
+
+## createGlobalStructure
+
+`createGlobalStructure` allows you to use state from `useStructure` across multiple components, without having to use Context.
+
+```javascript
+const useCounter = createGlobalStructure({ counter: 0 });
+
+function Component1() {
+  const counter = useCounter();
+
+  return (
+    <div>
+      <h1>Count: {counter.count}</h1>
+      <button
+        onPress={() => {
+          counter.count += 1; // State changes here update both Component1 and Component2
+        }}
+      >
+        Increment
+      </button>
+    </div>
+  );
+}
+
+function Component2() {
+  const counter = useCounter();
+
+  return (
+    <div>
+      <h1>Same Count: {counter.count}</h1> // This will update when button on
+      Component1 is pressed
+    </div>
+  );
+}
+```
+
+### Observer
+
+`createGlobalStructure` accepts a second optional boolean value, which will cause the function to return a tuple--the first value will be the the same generated hook, the second is an observer that you can use to `subscribe` callbacks to, or force updates.
+
+```javascript
+const [useCounter, counterObserver] = createGlobalStructure({ counter}, true);
+
+counterObserver.subscribe(counter => {
+  console.log(counter.count); // Will log the count whenever the button on Component1 is pressed
+})
+
+...
+
+function Component1() {
+    const counter = useCounter();
+
+  return (
+    <div>
+      <h1>Count: {counter.count}</h1>
+      <button onPress={() => {
+          counter.count += 1;
+        }}
+      >Increment</button>
+    </div>
+  )
+}
+
+...
+
+function UpdateCounter(count) {
+  counterObserver.update({ count }); // Can be called from anywhere in the app and components using `useCounter` will update.
+}
+
+```
 
 ## Caveats
 

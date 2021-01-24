@@ -725,12 +725,26 @@ describe("createGlobalStructure", () => {
   test("updates to the observer update listening components", () => {
     const [useTest, testObserver] = createGlobalStructure({ a: "a" }, true);
 
-    const { result } = renderHook(() => useTest());
+    const { result, rerender } = renderHook(() => useTest());
 
     act(() => {
       testObserver.update({ a: "a2" });
     });
 
+    rerender();
     expect(result.current.a).toBe("a2");
+  });
+
+  test("updates the observer using cb", () => {
+    const [useTest, testObserver] = createGlobalStructure({ a: 1 }, true);
+
+    const { result, rerender } = renderHook(() => useTest());
+
+    act(() => {
+      testObserver.update((prevVal) => ({ a: prevVal.a + 1 }));
+    });
+
+    rerender();
+    expect(result.current.a).toBe(2);
   });
 });
