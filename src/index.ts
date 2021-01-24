@@ -91,7 +91,7 @@ function deepCopy(
 
     return arrayProxy(newArr, setObj);
   } else {
-    const result: Record<any, any> = Object.create(obj);
+    const result: Record<any, any> = {};
 
     for (const key of getAllPropertyNames(obj)) {
       result[key] = deepCopy(obj[key], update, result, key);
@@ -141,7 +141,7 @@ function objectProxy(
       }
       return Reflect.get(target, prop, receiver);
     },
-    set: function (target, prop, receiver) {
+    set: function (target, prop, value) {
       if (typeof prop === "symbol") {
         return false;
       }
@@ -149,7 +149,7 @@ function objectProxy(
         memo = { ...target };
       }
 
-      memo[prop] = receiver;
+      memo[prop] = value;
       setObj(memo);
       return true;
     },
@@ -167,7 +167,7 @@ function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
           }
           memo.set(key, value);
 
-          setObj(map);
+          setObj(memo);
           return memo;
         };
       } else if (prop === "delete") {
@@ -191,6 +191,8 @@ function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
         return target.get.bind(target);
       } else if (prop === Symbol.iterator) {
         return target[Symbol.iterator].bind(target);
+      } else if (prop === "size") {
+        return target.size;
       }
 
       return Reflect.get(target, prop, receiver);
@@ -234,6 +236,8 @@ function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
         return target.has.bind(target);
       } else if (prop === Symbol.iterator) {
         return target[Symbol.iterator].bind(target);
+      } else if (prop === "size") {
+        return target.size;
       }
 
       return Reflect.get(target, prop, receiver);
@@ -333,17 +337,19 @@ function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
           return Reflect.get(target, prop, receiver);
       }
     },
-    set: function (target, prop, receiver) {
-      if (typeof prop === "number" && !Number.isNaN(Number(prop))) {
+    set: function (target, prop, value, receiver) {
+      const lookup = Number(prop);
+      if (!Number.isNaN(lookup)) {
         if (memo.length === 0) {
           memo.push(...target);
         }
-        memo[prop] = receiver;
+
+        memo[lookup] = value;
 
         setObj(memo);
         return true;
       }
-      return Reflect.get(target, prop, receiver);
+      return Reflect.set(target, prop, value, receiver);
     },
   });
 }
