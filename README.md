@@ -135,8 +135,10 @@ Note that if your class method returns a value, it should not be `undefined` (us
 
 1. Don't use this if you need to support pre ES6 browsers. This package depends on [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy), which can't be polyfilled.
 
-2. Don't use cyclical graphs. Though it likely could be supported, it's an edge case I don't want to try to address.
+2. If you're making multiple updates on nested structures in a single render, always update in order of inner structures to outer structures. Otherwise, you'll overwrite your inner structures and those changes won't be updated on your component.
 
-3. If you use a class instance, your mutating methods must not return anything/return `undefined`, and your "getters" must not return `undefined` (use `null` instead`). This is to prevent render loops.
+3. Don't use cyclical graphs. Though it likely could be supported, it's an edge case I don't want to try to address.
 
-4. Any methods on your objects shouldn't be async. Your components won't update correctly if you're trying to set state from within those promises.
+4. If you use a class instance, your mutating methods must not return anything/return `undefined`, and your "getters" must not return `undefined` (use `null` instead`). This is to prevent render loops.
+
+5. Any methods on your objects shouldn't be async. Your components won't update correctly if you're trying to set state from within those promises.
