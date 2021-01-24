@@ -21,10 +21,16 @@ export function useStructure<T extends Collection>(
   }, [deepObj]);
 }
 
-export function createGlobalStructure<T extends Collection>(initialObj: T) {
-  const observer = new Observer(initialObj);
+export function createGlobalStructure<
+  T extends Collection,
+  R extends boolean = false
+>(
+  initialObject: T,
+  includeObserver?: R
+): R extends true ? [() => T, Observer<T>] : () => T {
+  const observer = new Observer(initialObject);
 
-  return function useStructure(): T {
+  function useStructure(): T {
     const [deepObj, setDeepObj] = useState<T>(observer.value);
 
     useEffect(() => {
@@ -40,7 +46,10 @@ export function createGlobalStructure<T extends Collection>(initialObj: T) {
 
       return copy;
     }, [deepObj]);
-  };
+  }
+
+  // @ts-ignore
+  return includeObserver ? [useStructure, observer] : useStructure;
 }
 
 function deepCopy(
