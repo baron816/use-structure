@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react-hooks";
-import { useStructure } from "../src";
+import { createGlobalStructure, useStructure } from "../src";
 
 describe("use-structure", () => {
   describe("Array", () => {
@@ -575,5 +575,176 @@ describe("use-structure", () => {
       expect(result.current.length).toBe(5);
       expect(result.current.width).toBe(10);
     });
+  });
+
+  describe("Different nested structures", () => {
+    test("array in object", () => {
+      const { result, rerender } = renderHook(() =>
+        useStructure({ a: 1, b: [] })
+      );
+
+      act(() => {
+        result.current.b.push(1);
+        result.current.a = 2;
+      });
+
+      rerender();
+      expect(result.current).toEqual({ a: 2, b: [1] });
+    });
+
+    test("set in object", () => {
+      const { result, rerender } = renderHook(() =>
+        useStructure({ a: 1, b: new Set() })
+      );
+
+      act(() => {
+        result.current.b.add(1);
+        result.current.a = 2;
+      });
+
+      rerender();
+      expect(result.current).toEqual({ a: 2, b: new Set([1]) });
+    });
+
+    test("map in object", () => {
+      const { result, rerender } = renderHook(() =>
+        useStructure({ a: 1, b: new Map() })
+      );
+
+      act(() => {
+        result.current.b.set("c", 1);
+        result.current.a = 2;
+      });
+
+      rerender();
+      expect(result.current).toEqual({ a: 2, b: new Map([["c", 1]]) });
+    });
+
+    test("object in array", () => {
+      const { result, rerender } = renderHook(() => useStructure([{ a: 1 }]));
+
+      act(() => {
+        result.current[0].a = 2;
+        result.current.push({ a: 3 });
+      });
+
+      rerender();
+      expect(result.current).toEqual([{ a: 2 }, { a: 3 }]);
+    });
+
+    test("set in array", () => {
+      const { result, rerender } = renderHook(() =>
+        useStructure([new Set(["a"])])
+      );
+
+      act(() => {
+        result.current[0].add("b");
+        result.current.push(new Set(["c"]));
+      });
+
+      rerender();
+      expect(result.current).toEqual([new Set(["a", "b"]), new Set("c")]);
+    });
+
+    test("map in array", () => {
+      const { result, rerender } = renderHook(() =>
+        useStructure([new Map([["a", 1]])])
+      );
+
+      act(() => {
+        result.current[0].set("a", 2);
+        result.current[0].set("b", 3);
+        result.current.push(new Map([["c", 4]]));
+      });
+
+      rerender();
+      expect(result.current).toEqual([
+        new Map([
+          ["a", 2],
+          ["b", 3],
+        ]),
+        new Map([["c", 4]]),
+      ]);
+    });
+  });
+});
+
+describe("createGlobalStructure", () => {
+  test("states are available to all components", () => {
+    const useTest = createGlobalStructure({ a: "a", b: "b" });
+
+    const { result: result1, rerender: rerender1 } = renderHook(() =>
+      useTest()
+    );
+    const { result: result2, rerender: rerender2 } = renderHook(() =>
+      useTest()
+    );
+
+    act(() => {
+      result1.current.a = "a2";
+    });
+
+    rerender1();
+    rerender2();
+
+    expect(result1.current.a).toBe("a2");
+    expect(result2.current.a).toBe("a2");
+    expect(result2.current.b).toBe("b");
+
+    act(() => {
+      result2.current.b = "b2";
+      result2.current.a = "a3";
+    });
+
+    rerender1();
+    rerender2();
+
+    expect(result1.current.a).toBe("a3");
+    expect(result2.current.a).toBe("a3");
+    expect(result1.current.b).toBe("b2");
+    expect(result2.current.b).toBe("b2");
+    expect(result2.current).toStrictEqual(result1.current);
+  });
+
+  test("observer on global structure", () => {
+    const [useTest, testObserver] = createGlobalStructure({ a: "a" }, true);
+
+    const { result, rerender } = renderHook(() => useTest());
+    const cb = jest.fn();
+
+    testObserver.subscribe(cb);
+
+    act(() => {
+      result.current.a = "a2";
+    });
+
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledWith({ a: "a2" });
+  });
+
+  test("updates to the observer update listening components", () => {
+    const [useTest, testObserver] = createGlobalStructure({ a: "a" }, true);
+
+    const { result, rerender } = renderHook(() => useTest());
+
+    act(() => {
+      testObserver.update({ a: "a2" });
+    });
+
+    rerender();
+    expect(result.current.a).toBe("a2");
+  });
+
+  test("updates the observer using cb", () => {
+    const [useTest, testObserver] = createGlobalStructure({ a: 1 }, true);
+
+    const { result, rerender } = renderHook(() => useTest());
+
+    act(() => {
+      testObserver.update((prevVal) => ({ a: prevVal.a + 1 }));
+    });
+
+    rerender();
+    expect(result.current.a).toBe(2);
   });
 });

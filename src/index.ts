@@ -2,12 +2,19 @@ import { useState, useMemo, useEffect } from "react";
 
 type Collection = Record<any, any> | any[] | Set<any>;
 
+/**
+ * Returns a stateful object which can set imparatively.
+ * Any 'mutations' to the object will correctly update
+ * the component's state.
+ *
+ * @param initialObject The initial state value. Can pass
+ * a function to instantiate initial state (similar to useState).
+ */
 export function useStructure<T extends Collection>(
-  initialObj: T | (() => T)
+  initialObject: T | (() => T)
 ): T {
   const [deepObj, setDeepObj] = useState<T>(() => {
-    // @ts-ignore
-    return typeof initialObj === "function" ? initialObj() : initialObj;
+    return isFunction(initialObject) ? initialObject() : initialObject;
   });
 
   return useMemo(() => {
@@ -21,10 +28,24 @@ export function useStructure<T extends Collection>(
   }, [deepObj]);
 }
 
-export function createGlobalStructure<T extends Collection>(initialObj: T) {
-  const observer = new Observer(initialObj);
+/**
+ * Creates a `useStructure` hook that shares state across all components that
+ * are composed of the hook. Use for "global" state.
+ *
+ * @param initialObject Initial state value.
+ * @param {boolean} [includeObserver] If true, createGlobalStructure will return
+ * an array of [0] the hook, and [1] and observer that listens to state changes.
+ */
+export function createGlobalStructure<
+  T extends Collection,
+  R extends boolean = false
+>(
+  initialObject: T,
+  includeObserver?: R
+): R extends true ? [() => T, Observer<T>] : () => T {
+  const observer = new Observer(initialObject);
 
-  return function useStructure(): T {
+  function useStructure(): T {
     const [deepObj, setDeepObj] = useState<T>(observer.value);
 
     useEffect(() => {
@@ -40,7 +61,10 @@ export function createGlobalStructure<T extends Collection>(initialObj: T) {
 
       return copy;
     }, [deepObj]);
-  };
+  }
+
+  // @ts-ignore
+  return includeObserver ? [useStructure, observer] : useStructure;
 }
 
 function deepCopy(
@@ -376,11 +400,16 @@ class Observer<T> {
     return this.unsubscribe(fn);
   }
 
-  update(newVal: T): void {
-    this.value = newVal;
+  update(newVal: T | ((oldVal: T) => T)): void {
+    // @ts-ignore
+    this.value = isFunction(newVal) ? newVal(this.value) : newVal;
 
     for (const sub of this.subscribers) {
       sub(this.value);
     }
   }
+}
+
+function isFunction(val: any): val is Function {
+  return typeof val === "function";
 }
