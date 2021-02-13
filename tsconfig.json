@@ -17,7 +17,7 @@
     "include": [
       "**/*.d.ts",
       "**/*.ts"
-, "__test__/index.test.tsx"    ],
+    ],
     "exclude": [
       "node_modules",
       "**/*.test.*"
