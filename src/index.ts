@@ -45,7 +45,7 @@ export function createGlobalStructure<
 ): R extends true ? [() => T, Observer<T>] : () => T {
   const observer = new Observer(initialObject);
 
-  function useStructure(): T {
+  function useGlobalStructure(): T {
     const [deepObj, setDeepObj] = useState<T>(observer.value);
 
     useEffect(() => {
@@ -64,7 +64,7 @@ export function createGlobalStructure<
   }
 
   // @ts-ignore
-  return includeObserver ? [useStructure, observer] : useStructure;
+  return includeObserver ? [useGlobalStructure, observer] : useGlobalStructure;
 }
 
 function deepCopy(
@@ -142,7 +142,7 @@ function objectProxy(
 ) {
   let memo: Record<any, any> | null = null;
   return new Proxy(obj, {
-    get: function (target, prop, receiver) {
+    get(target, prop, receiver) {
       if (
         typeof prop === "string" &&
         getAllPropertyNames(target).has(prop) &&
@@ -165,7 +165,7 @@ function objectProxy(
       }
       return Reflect.get(target, prop, receiver);
     },
-    set: function (target, prop, value) {
+    set(target, prop, value) {
       if (typeof prop === "symbol") {
         return false;
       }
@@ -183,7 +183,7 @@ function objectProxy(
 function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
   let memo: Map<any, any> | null = null;
   return new Proxy(map, {
-    get: function (target, prop, receiver) {
+    get(target, prop, receiver) {
       if (prop === "set") {
         return (key: any, value: any) => {
           if (memo == null) {
@@ -227,7 +227,7 @@ function mapProxy(map: Map<any, any>, setObj: (newObj: Collection) => void) {
 function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
   let memo: Set<any> | null = null;
   return new Proxy(set, {
-    get: function (target, prop, receiver) {
+    get(target, prop, receiver) {
       if (prop === "add") {
         return (val: any) => {
           if (target.has(val)) {
@@ -269,99 +269,37 @@ function setProxy(set: Set<any>, setObj: (newObj: Collection) => void) {
   });
 }
 
+const arrayMethods = new Set([
+  "push",
+  "pop",
+  "unshift",
+  "shift",
+  "sort",
+  "splice",
+  "reverse",
+  "copyWithin",
+  "fill",
+]);
+
 function arrayProxy(arr: any[], setObj: (newObj: Collection) => void) {
   let memo: any[] = [];
   return new Proxy(arr, {
-    get: function (target, prop, receiver) {
-      switch (prop) {
-        case "push":
-          return (...v: any[]) => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            memo.push(...v);
-            setObj(memo);
-            return v[v.length - 1];
-          };
-        case "pop":
-          return () => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            const lastVal = memo.pop();
-            setObj(memo);
-            return lastVal;
-          };
-        case "unshift":
-          return (...v: any[]) => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            memo.unshift(...v);
-            setObj(memo);
-            return v[0];
-          };
-        case "shift":
-          return () => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            const firstVal = memo.shift();
-            setObj(memo);
-            return firstVal;
-          };
-        case "sort":
-          return (compareFunction?: (a: number, b: number) => number) => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-
-            memo.sort(compareFunction);
-            setObj(memo);
-            return memo;
-          };
-        case "splice":
-          return (start: number, deleteCount: number, ...items: any[]) => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            memo.splice(start, deleteCount, ...items);
-            setObj(memo);
-            return memo;
-          };
-        case "reverse":
-          return () => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            memo.reverse();
-            setObj(memo);
-            return memo;
-          };
-        case "copyWithin":
-          return (idx: number, start: number, end?: number) => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-
-            memo.copyWithin(idx, start, end);
-            setObj(memo);
-            return memo;
-          };
-        case "fill":
-          return (value: any, start?: number, end?: number) => {
-            if (memo.length === 0) {
-              memo.push(...target);
-            }
-            memo.fill(value, start, end);
-            setObj(memo);
-            return memo;
-          };
-        default:
-          return Reflect.get(target, prop, receiver);
+    get(target, prop, receiver) {
+      if (typeof prop === "string" && arrayMethods.has(prop)) {
+        return (...v: any[]) => {
+          if (memo.length === 0) {
+            memo.push(...target);
+          }
+          // @ts-ignore
+          const result = memo[prop](...v);
+          setObj(memo);
+          return result;
+        };
+      } else {
+        return Reflect.get(target, prop, receiver);
       }
     },
-    set: function (target, prop, value, receiver) {
+    set(target, prop, value, receiver) {
       const lookup = Number(prop);
       if (!Number.isNaN(lookup)) {
         if (memo.length === 0) {
@@ -401,7 +339,6 @@ class Observer<T> {
   }
 
   update(newVal: T | ((oldVal: T) => T)): void {
-    // @ts-ignore
     this.value = isFunction(newVal) ? newVal(this.value) : newVal;
 
     for (const sub of this.subscribers) {

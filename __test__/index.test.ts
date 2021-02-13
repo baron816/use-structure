@@ -9,6 +9,17 @@ describe("use-structure", () => {
       expect(result.current).toEqual([]);
     });
 
+    test("Non proxied array methods work correctly", () => {
+      const { result, rerender } = renderHook(() =>
+        useStructure([1, 2, 3, 4, 5, 6])
+      );
+
+      rerender();
+      expect(
+        result.current.filter((v) => v % 2 === 0).map((v) => v + 2)
+      ).toEqual([4, 6, 8]);
+    });
+
     test("basic push operation", () => {
       const { result, rerender } = renderHook(() => useStructure([]));
 
